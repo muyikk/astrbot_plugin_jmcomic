@@ -69,7 +69,7 @@ _ORDER_ALIASES = {
 }
 
 
-@register(PLUGIN_NAME, "feewee009", "在 AstrBot 中搜索 JMComic 并生成 PDF", "1.0.0")
+@register(PLUGIN_NAME, "feewee009", "在 AstrBot 中搜索 JMComic 并生成 PDF", "1.0.1")
 class JMComicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
@@ -99,6 +99,7 @@ class JMComicPlugin(Star):
             "JMComic 插件命令\n"
             "/jm search <关键词> [页码] - 搜索\n"
             "/jm detail <ID> - 查看详情\n"
+            "/jm random - 随机获取一本漫画详情\n"
             "/jm category [分类] [页码] [时间] [排序] - 分类浏览\n"
             "/jm pdf <ID> - 下载并发送完整 PDF\n"
             "/jm shard <ID> <序号> - 发送分页 PDF\n"
@@ -106,6 +107,7 @@ class JMComicPlugin(Star):
             "也可完全使用中文：\n"
             "/禁漫 搜本 <关键词> [页码]\n"
             "/禁漫 详情 <ID>\n"
+            "/禁漫 随机\n"
             "/禁漫 分类 韩漫 1 本月 浏览\n"
             "/禁漫 下载 <ID>\n"
             "/禁漫 分页 <ID> <序号>\n"
@@ -137,18 +139,18 @@ class JMComicPlugin(Star):
         """获取漫画详情，例如：/jm detail 12345。"""
         try:
             detail = await self.service.detail(album_id)
-            tags = "、".join(detail["tags"]) or "无"
-            author = detail["author"] or "未知"
-            pages = detail["page_count"] or "未知"
-            yield event.plain_result(
-                f"JM{detail['id']}\n"
-                f"标题：{detail['title']}\n"
-                f"作者：{author}\n"
-                f"页数：{pages}\n"
-                f"标签：{tags}"
-            )
+            yield event.plain_result(self._format_detail(detail))
         except Exception as error:
             yield event.plain_result(self._user_error("获取详情失败", error))
+
+    @jm.command("random", alias={"随机", "随机本子", "抽一本"})
+    async def jm_random(self, event: AstrMessageEvent):
+        """随机获取一本漫画的详情，例如：/jm random。"""
+        try:
+            detail = await self.service.random_detail()
+            yield event.plain_result(f"随机推荐\n{self._format_detail(detail)}")
+        except Exception as error:
+            yield event.plain_result(self._user_error("随机获取失败", error))
 
     @jm.command("category", alias={"分类", "排行"})
     async def jm_category(
@@ -306,6 +308,19 @@ class JMComicPlugin(Star):
     def _file_sendable(self, path: Path) -> bool:
         max_size_mb = max(1, int(self.config.get("max_send_file_mb", 100)))
         return path.stat().st_size <= max_size_mb * 1024 * 1024
+
+    @staticmethod
+    def _format_detail(detail: dict[str, Any]) -> str:
+        tags = "、".join(detail["tags"]) or "无"
+        author = detail["author"] or "未知"
+        pages = detail["page_count"] or "未知"
+        return (
+            f"JM{detail['id']}\n"
+            f"标题：{detail['title']}\n"
+            f"作者：{author}\n"
+            f"页数：{pages}\n"
+            f"标签：{tags}"
+        )
 
     @staticmethod
     def _user_error(prefix: str, error: Exception) -> str:

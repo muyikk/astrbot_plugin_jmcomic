@@ -5,6 +5,7 @@ import contextlib
 import json
 import math
 import os
+import random
 import shutil
 import time
 from dataclasses import dataclass
@@ -186,6 +187,32 @@ class JMComicService:
             "author": str(getattr(album, "author", "") or ""),
             "page_count": int(getattr(album, "page_count", 0) or 0),
         }
+
+    async def random_detail(self) -> dict[str, Any]:
+        """Pick one album from a random catalogue page and return its details."""
+        first_items, page_count, _ = await self.categories(
+            page=1,
+            category="all",
+            time_range="all",
+            order_by="latest",
+        )
+        if not first_items:
+            raise LookupError("当前没有可随机选择的漫画")
+
+        random_page = random.randint(1, max(1, page_count))
+        items = first_items
+        if random_page != 1:
+            page_items, _, _ = await self.categories(
+                page=random_page,
+                category="all",
+                time_range="all",
+                order_by="latest",
+            )
+            if page_items:
+                items = page_items
+
+        selected = random.choice(items)
+        return await self.detail(selected["id"])
 
     async def categories(
         self,

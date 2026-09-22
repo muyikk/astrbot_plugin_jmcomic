@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 try:
     from astrbot_plugin_jmcomic.jm_service import JMComicService, ServiceConfig
@@ -38,6 +39,38 @@ class CacheCleanupTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(list(service.download_dir.iterdir()), [])
             self.assertEqual(list(service.pdf_dir.iterdir()), [])
             self.assertEqual(service.option_path.read_text(encoding="utf-8"), "keep")
+
+
+@unittest.skipIf(JMComicService is None, f"缺少项目依赖：{JMCOMIC_IMPORT_ERROR}")
+class RandomDetailTest(unittest.IsolatedAsyncioTestCase):
+    async def test_random_detail_uses_random_catalogue_page(self) -> None:
+        service = JMComicService(Path("/tmp/jmcomic-random-test"), ServiceConfig())
+        service.categories = AsyncMock(
+            side_effect=[
+                ([{"id": "1", "title": "first"}], 3, 2),
+                ([{"id": "9", "title": "selected"}], 3, 2),
+            ]
+        )
+        expected = {
+            "id": "9",
+            "title": "selected",
+            "tags": [],
+            "author": "",
+            "page_count": 1,
+        }
+        service.detail = AsyncMock(return_value=expected)
+
+        with (
+            patch("astrbot_plugin_jmcomic.jm_service.random.randint", return_value=3),
+            patch(
+                "astrbot_plugin_jmcomic.jm_service.random.choice",
+                return_value={"id": "9", "title": "selected"},
+            ),
+        ):
+            result = await service.random_detail()
+
+        self.assertEqual(result, expected)
+        service.detail.assert_awaited_once_with("9")
 
 
 if __name__ == "__main__":
