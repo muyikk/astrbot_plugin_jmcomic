@@ -1,0 +1,10 @@
+This plugin is an independent AstrBot integration inspired by:
+
+- Soulter/helloworld (AstrBot plugin template)
+  https://github.com/Soulter/helloworld
+- FfmpegZZZ/JMComic-Api (FastAPI JMComic wrapper and PDF workflow)
+  https://github.com/FfmpegZZZ/JMComic-Api
+- hect0x7/JMComic-Crawler-Python (the jmcomic Python dependency)
+  https://github.com/hect0x7/JMComic-Crawler-Python
+
+The dependencies remain subject to their respective licenses and terms.

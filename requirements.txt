@@ -1,0 +1,4 @@
+jmcomic==2.6.18
+Pillow>=11.1.0
+pypdf>=5
+PyYAML>=6.0

@@ -1,0 +1,97 @@
+{
+  "admin_only_download": {
+    "description": "仅允许管理员下载和生成 PDF",
+    "type": "bool",
+    "default": false,
+    "hint": "建议在群聊机器人中保持开启，避免磁盘和带宽被滥用。"
+  },
+  "client_impl": {
+    "description": "JMComic 客户端类型",
+    "type": "string",
+    "default": "api",
+    "options": ["api", "html"],
+    "hint": "推荐 api，即移动端 API。"
+  },
+  "timeout_seconds": {
+    "description": "下载和 PDF 生成超时（秒）",
+    "type": "int",
+    "default": 600
+  },
+  "metadata_timeout_seconds": {
+    "description": "搜索与详情请求超时（秒）",
+    "type": "int",
+    "default": 45
+  },
+  "max_concurrent_downloads": {
+    "description": "最大同时下载任务数",
+    "type": "int",
+    "default": 2,
+    "hint": "数值过高可能导致上游限流，也会显著增加内存和带宽占用。"
+  },
+  "retry_attempts": {
+    "description": "临时下载失败重试次数",
+    "type": "int",
+    "default": 3
+  },
+  "image_threads": {
+    "description": "单个任务的图片下载线程数",
+    "type": "int",
+    "default": 20
+  },
+  "photo_threads": {
+    "description": "单个任务的章节下载线程数",
+    "type": "int",
+    "default": 2
+  },
+  "jpeg_quality": {
+    "description": "PDF JPEG 质量",
+    "type": "int",
+    "default": 70,
+    "hint": "范围 1-95；设为 0 表示不额外指定压缩质量。"
+  },
+  "encrypt_pdf": {
+    "description": "使用漫画 ID 加密 PDF",
+    "type": "bool",
+    "default": false
+  },
+  "shard_pages": {
+    "description": "每个 PDF 分片的页数",
+    "type": "int",
+    "default": 250
+  },
+  "max_send_file_mb": {
+    "description": "允许发送的最大文件大小（MiB）",
+    "type": "int",
+    "default": 100
+  },
+  "search_result_limit": {
+    "description": "搜索和分类命令最多展示条数",
+    "type": "int",
+    "default": 10
+  },
+  "daily_auto_cleanup": {
+    "description": "每天自动清理漫画图片和 PDF 缓存",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后按服务器本地时间每天 04:00 清空 downloads 和 pdf；不会删除插件配置。下载或 PDF 生成任务运行时会等待任务完成。"
+  },
+  "proxy": {
+    "description": "网络代理",
+    "type": "string",
+    "default": "",
+    "hint": "可选，例如 http://127.0.0.1:7890。留空时不显式设置代理。"
+  },
+  "username": {
+    "description": "JMComic 登录用户名",
+    "type": "string",
+    "default": "",
+    "secret": true,
+    "hint": "可选；用户名和密码同时填写时启用登录插件。"
+  },
+  "password": {
+    "description": "JMComic 登录密码",
+    "type": "string",
+    "default": "",
+    "secret": true
+  }
+}

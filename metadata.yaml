@@ -1,0 +1,8 @@
+name: astrbot_plugin_jmcomic
+display_name: JMComic 禁漫搜索下载
+desc: 搜索 JMComic、查看详情，并下载生成可发送的完整或分片 PDF。
+short_desc: 搜索 JMComic 并生成 PDF 文件。
+version: v1.0.0
+author: muyikk
+repo: https://github.com/muyikk/astrbot_plugin_jmcomic
+astrbot_version: ">=4.9.2,<5"
