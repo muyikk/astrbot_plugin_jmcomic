@@ -69,7 +69,7 @@ _ORDER_ALIASES = {
 }
 
 
-@register(PLUGIN_NAME, "feewee009", "在 AstrBot 中搜索 JMComic 并生成 PDF", "1.0.1")
+@register(PLUGIN_NAME, "feewee009", "在 AstrBot 中搜索 JMComic 并生成 PDF", "1.0.2")
 class JMComicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
@@ -139,18 +139,20 @@ class JMComicPlugin(Star):
         """获取漫画详情，例如：/jm detail 12345。"""
         try:
             detail = await self.service.detail(album_id)
-            yield event.plain_result(self._format_detail(detail))
         except Exception as error:
             yield event.plain_result(self._user_error("获取详情失败", error))
+            return
+        yield await self._detail_result(event, detail)
 
     @jm.command("random", alias={"随机", "随机本子", "抽一本"})
     async def jm_random(self, event: AstrMessageEvent):
         """随机获取一本漫画的详情，例如：/jm random。"""
         try:
             detail = await self.service.random_detail()
-            yield event.plain_result(f"随机推荐\n{self._format_detail(detail)}")
         except Exception as error:
             yield event.plain_result(self._user_error("随机获取失败", error))
+            return
+        yield await self._detail_result(event, detail, prefix="随机推荐\n")
 
     @jm.command("category", alias={"分类", "排行"})
     async def jm_category(
@@ -308,6 +310,28 @@ class JMComicPlugin(Star):
     def _file_sendable(self, path: Path) -> bool:
         max_size_mb = max(1, int(self.config.get("max_send_file_mb", 100)))
         return path.stat().st_size <= max_size_mb * 1024 * 1024
+
+    async def _detail_result(
+        self,
+        event: AstrMessageEvent,
+        detail: dict[str, Any],
+        *,
+        prefix: str = "",
+    ) -> Any:
+        detail_text = f"{prefix}{self._format_detail(detail)}"
+        if not bool(self.config.get("show_cover", True)):
+            return event.plain_result(detail_text)
+        try:
+            cover_path = await self.service.get_cover(detail["id"])
+        except Exception as error:
+            logger.warning("JM%s 封面获取失败，仅发送文字详情：%s", detail["id"], error)
+            return event.plain_result(detail_text)
+        return event.chain_result(
+            [
+                Comp.Image.fromFileSystem(str(cover_path)),
+                Comp.Plain(detail_text),
+            ]
+        )
 
     @staticmethod
     def _format_detail(detail: dict[str, Any]) -> str:

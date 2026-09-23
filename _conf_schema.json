@@ -69,11 +69,17 @@
     "type": "int",
     "default": 10
   },
-  "daily_auto_cleanup": {
-    "description": "每天自动清理漫画图片和 PDF 缓存",
+  "show_cover": {
+    "description": "详情和随机指令显示封面",
     "type": "bool",
     "default": true,
-    "hint": "启用后按服务器本地时间每天 04:00 清空 downloads 和 pdf；不会删除插件配置。下载或 PDF 生成任务运行时会等待任务完成。"
+    "hint": "开启后详情和随机指令发送封面加文字；关闭后只发送文字且不会下载封面。"
+  },
+  "daily_auto_cleanup": {
+    "description": "每天自动清理漫画图片、封面和 PDF 缓存",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后按服务器本地时间每天 04:00 清空 downloads、covers 和 pdf；不会删除插件配置。下载、封面或 PDF 生成任务运行时会等待任务完成。"
   },
   "proxy": {
     "description": "网络代理",

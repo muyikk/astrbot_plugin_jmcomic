@@ -79,6 +79,7 @@ class JMComicService:
     def __init__(self, data_dir: Path, config: ServiceConfig) -> None:
         self.data_dir = data_dir.resolve()
         self.download_dir = self.data_dir / "downloads"
+        self.cover_dir = self.data_dir / "covers"
         self.pdf_dir = self.data_dir / "pdf"
         self.option_path = self.data_dir / "option.generated.yml"
         self.config = config
@@ -92,6 +93,7 @@ class JMComicService:
 
     async def initialize(self) -> None:
         self.download_dir.mkdir(parents=True, exist_ok=True)
+        self.cover_dir.mkdir(parents=True, exist_ok=True)
         self.pdf_dir.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(self._load_runtime)
 
@@ -187,6 +189,44 @@ class JMComicService:
             "author": str(getattr(album, "author", "") or ""),
             "page_count": int(getattr(album, "page_count", 0) or 0),
         }
+
+    async def get_cover(self, raw_album_id: str) -> Path:
+        """Download and cache an album cover atomically."""
+        album_id = clean_album_id(raw_album_id)
+        cover_path = self.cover_dir / f"{album_id}.jpg"
+        if cover_path.is_file() and cover_path.stat().st_size > 0:
+            return cover_path
+
+        lock = await self._get_album_lock(album_id)
+        async with lock:
+            async with self._download_slots:
+                if cover_path.is_file() and cover_path.stat().st_size > 0:
+                    return cover_path
+
+                self.cover_dir.mkdir(parents=True, exist_ok=True)
+                temporary_path = self.cover_dir / f".{album_id}.tmp.jpg"
+                with contextlib.suppress(FileNotFoundError):
+                    temporary_path.unlink()
+                client = await self._get_client()
+                try:
+                    await asyncio.wait_for(
+                        asyncio.to_thread(
+                            client.download_album_cover,
+                            album_id,
+                            str(temporary_path),
+                        ),
+                        timeout=self.config.metadata_timeout_seconds,
+                    )
+                    if (
+                        not temporary_path.is_file()
+                        or temporary_path.stat().st_size == 0
+                    ):
+                        raise RuntimeError(f"JM{album_id} 封面下载结果为空")
+                    os.replace(temporary_path, cover_path)
+                finally:
+                    with contextlib.suppress(FileNotFoundError):
+                        temporary_path.unlink()
+                return cover_path
 
     async def random_detail(self) -> dict[str, Any]:
         """Pick one album from a random catalogue page and return its details."""
@@ -397,11 +437,11 @@ class JMComicService:
         deleted_files = 0
         deleted_bytes = 0
         data_dir = self.data_dir.resolve()
-        for target in (self.download_dir, self.pdf_dir):
+        for target in (self.download_dir, self.cover_dir, self.pdf_dir):
             resolved_target = target.resolve()
             if (
                 resolved_target.parent != data_dir
-                or resolved_target.name not in {"downloads", "pdf"}
+                or resolved_target.name not in {"downloads", "covers", "pdf"}
             ):
                 raise RuntimeError(f"拒绝清理非插件缓存目录：{resolved_target}")
             target.mkdir(parents=True, exist_ok=True)

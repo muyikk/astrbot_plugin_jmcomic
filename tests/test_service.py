@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 try:
     from astrbot_plugin_jmcomic.jm_service import JMComicService, ServiceConfig
@@ -26,19 +26,65 @@ class CacheCleanupTest(unittest.IsolatedAsyncioTestCase):
             data_dir = Path(temporary_dir)
             service = JMComicService(data_dir, ServiceConfig())
             service.download_dir.mkdir()
+            service.cover_dir.mkdir()
             service.pdf_dir.mkdir()
             album_dir = service.download_dir / "[1]test"
             album_dir.mkdir()
             (album_dir / "1.jpg").write_bytes(b"image")
+            (service.cover_dir / "1.jpg").write_bytes(b"cover")
             (service.pdf_dir / "1.pdf").write_bytes(b"pdf")
             service.option_path.write_text("keep", encoding="utf-8")
 
             result = await service.clear_cache()
 
-            self.assertEqual(result, {"files": 2, "bytes": 8})
+            self.assertEqual(result, {"files": 3, "bytes": 13})
             self.assertEqual(list(service.download_dir.iterdir()), [])
+            self.assertEqual(list(service.cover_dir.iterdir()), [])
             self.assertEqual(list(service.pdf_dir.iterdir()), [])
             self.assertEqual(service.option_path.read_text(encoding="utf-8"), "keep")
+
+
+@unittest.skipIf(JMComicService is None, f"缺少项目依赖：{JMCOMIC_IMPORT_ERROR}")
+class CoverCacheTest(unittest.IsolatedAsyncioTestCase):
+    async def test_cover_is_normalized_cached_and_written_atomically(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            service = JMComicService(Path(temporary_dir), ServiceConfig())
+            service.cover_dir.mkdir()
+            client = Mock()
+
+            def download_cover(_album_id: str, output_path: str) -> None:
+                Path(output_path).write_bytes(b"cover")
+
+            client.download_album_cover.side_effect = download_cover
+            service.client = client
+
+            first_path = await service.get_cover("JM12345")
+            second_path = await service.get_cover("12345")
+
+            self.assertEqual(first_path, service.cover_dir / "12345.jpg")
+            self.assertEqual(second_path, first_path)
+            self.assertEqual(first_path.read_bytes(), b"cover")
+            client.download_album_cover.assert_called_once()
+            self.assertFalse((service.cover_dir / ".12345.tmp.jpg").exists())
+
+    async def test_failed_cover_download_removes_temporary_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            service = JMComicService(Path(temporary_dir), ServiceConfig())
+            service.cover_dir.mkdir()
+            client = Mock()
+
+            def fail_download(_album_id: str, output_path: str) -> None:
+                Path(output_path).write_bytes(b"partial")
+                raise RuntimeError("download failed")
+
+            client.download_album_cover.side_effect = fail_download
+            service.client = client
+
+            with self.assertRaisesRegex(RuntimeError, "download failed"):
+                await service.get_cover("12345")
+
+            self.assertFalse((service.cover_dir / "12345.jpg").exists())
+            self.assertFalse((service.cover_dir / ".12345.tmp.jpg").exists())
 
 
 @unittest.skipIf(JMComicService is None, f"缺少项目依赖：{JMCOMIC_IMPORT_ERROR}")
