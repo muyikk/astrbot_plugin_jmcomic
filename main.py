@@ -69,7 +69,7 @@ _ORDER_ALIASES = {
 }
 
 
-@register(PLUGIN_NAME, "feewee009", "在 AstrBot 中搜索 JMComic 并生成 PDF", "1.0.2")
+@register(PLUGIN_NAME, "feewee009", "在 AstrBot 中搜索 JMComic 并生成 PDF", "1.0.3")
 class JMComicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
@@ -87,36 +87,30 @@ class JMComicPlugin(Star):
             )
         logger.info("JMComic 插件初始化完成，数据目录：%s", self.service.data_dir)
 
-    @filter.command_group("jm", alias={"禁漫", "JM"})
+    @filter.command_group("禁漫", alias={"jm", "JM"})
     def jm():
         """JMComic 搜索、详情与 PDF 下载。"""
         pass
 
-    @jm.command("help", alias={"帮助"})
+    @jm.command("帮助", alias={"help"})
     async def jm_help(self, event: AstrMessageEvent):
         """显示 JMComic 插件帮助。"""
         yield event.plain_result(
-            "JMComic 插件命令\n"
-            "/jm search <关键词> [页码] - 搜索\n"
-            "/jm detail <ID> - 查看详情\n"
-            "/jm random - 随机获取一本漫画详情\n"
-            "/jm category [分类] [页码] [时间] [排序] - 分类浏览\n"
-            "/jm pdf <ID> - 下载并发送完整 PDF\n"
-            "/jm shard <ID> <序号> - 发送分页 PDF\n"
-            "/jm status - 查看缓存状态\n\n"
-            "也可完全使用中文：\n"
-            "/禁漫 搜本 <关键词> [页码]\n"
+            "禁漫插件命令\n"
+            "/禁漫 搜索 <关键词> [页码] - 搜索\n"
             "/禁漫 详情 <ID>\n"
-            "/禁漫 随机\n"
-            "/禁漫 分类 韩漫 1 本月 浏览\n"
-            "/禁漫 下载 <ID>\n"
-            "/禁漫 分页 <ID> <序号>\n"
-            "/禁漫 状态"
+            "/禁漫 随机 - 随机获取一本漫画详情\n"
+            "/禁漫 分类 [分类] [页码] [时间] [排序] - 分类浏览\n"
+            "/禁漫 下载 <ID> - 下载并发送完整 PDF\n"
+            "/禁漫 分片 <ID> <序号> - 发送分页 PDF\n"
+            "/禁漫 状态 - 查看缓存状态\n\n"
+            "兼容英文指令：/jm search、/jm detail、/jm random、/jm category、"
+            "/jm pdf、/jm shard、/jm status"
         )
 
-    @jm.command("search", alias={"搜索", "搜本"})
+    @jm.command("搜索", alias={"search", "搜本"})
     async def jm_search(self, event: AstrMessageEvent, keyword: str, page: int = 1):
-        """搜索漫画，例如：/jm search 关键词 1。"""
+        """搜索漫画，例如：/禁漫 搜索 关键词 1。"""
         if page < 1:
             yield event.plain_result("页码必须大于或等于 1。")
             return
@@ -134,9 +128,9 @@ class JMComicPlugin(Star):
         except Exception as error:
             yield event.plain_result(self._user_error("搜索失败", error))
 
-    @jm.command("detail", alias={"详情", "信息"})
+    @jm.command("详情", alias={"detail", "信息"})
     async def jm_detail(self, event: AstrMessageEvent, album_id: str):
-        """获取漫画详情，例如：/jm detail 12345。"""
+        """获取漫画详情，例如：/禁漫 详情 12345。"""
         try:
             detail = await self.service.detail(album_id)
         except Exception as error:
@@ -144,9 +138,9 @@ class JMComicPlugin(Star):
             return
         yield await self._detail_result(event, detail)
 
-    @jm.command("random", alias={"随机", "随机本子", "抽一本"})
+    @jm.command("随机", alias={"random", "随机本子", "抽一本"})
     async def jm_random(self, event: AstrMessageEvent):
-        """随机获取一本漫画的详情，例如：/jm random。"""
+        """随机获取一本漫画的详情，例如：/禁漫 随机。"""
         try:
             detail = await self.service.random_detail()
         except Exception as error:
@@ -154,7 +148,7 @@ class JMComicPlugin(Star):
             return
         yield await self._detail_result(event, detail, prefix="随机推荐\n")
 
-    @jm.command("category", alias={"分类", "排行"})
+    @jm.command("分类", alias={"category", "排行"})
     async def jm_category(
         self,
         event: AstrMessageEvent,
@@ -163,7 +157,7 @@ class JMComicPlugin(Star):
         time_range: str = "all",
         order_by: str = "latest",
     ):
-        """分类浏览，例如：/jm category hanman 1 all view。"""
+        """分类浏览，例如：/禁漫 分类 韩漫 1 全部 浏览。"""
         category = _CATEGORY_ALIASES.get(category, category.lower())
         time_range = _TIME_ALIASES.get(time_range, time_range.lower())
         order_by = _ORDER_ALIASES.get(order_by, order_by.lower())
@@ -174,7 +168,7 @@ class JMComicPlugin(Star):
             )
             return
         if time_range not in _TIME_RANGES or order_by not in _ORDERS or page < 1:
-            yield event.plain_result("时间、排序或页码参数无效，请使用 /jm help 查看格式。")
+            yield event.plain_result("时间、排序或页码参数无效，请使用 /禁漫 帮助 查看格式。")
             return
         try:
             items, page_count, total = await self.service.categories(
@@ -195,9 +189,9 @@ class JMComicPlugin(Star):
         except Exception as error:
             yield event.plain_result(self._user_error("分类浏览失败", error))
 
-    @jm.command("pdf", alias={"下载", "下载本子"})
+    @jm.command("下载", alias={"pdf", "下载本子"})
     async def jm_pdf(self, event: AstrMessageEvent, album_id: str):
-        """下载漫画并发送完整 PDF，例如：/jm pdf 12345。"""
+        """下载漫画并发送完整 PDF，例如：/禁漫 下载 12345。"""
         if not self._download_allowed(event):
             yield event.plain_result("当前配置只允许 AstrBot 管理员执行下载命令。")
             return
@@ -207,7 +201,7 @@ class JMComicPlugin(Star):
             if not self._file_sendable(artifact.path):
                 yield event.plain_result(
                     f"PDF 已生成，但大小为 {human_size(artifact.path.stat().st_size)}，"
-                    "超过发送上限。请使用 /jm shard <ID> <序号> 分片发送。"
+                    "超过发送上限。请使用 /禁漫 分片 <ID> <序号> 分片发送。"
                 )
                 return
             message = (
@@ -225,11 +219,11 @@ class JMComicPlugin(Star):
         except Exception as error:
             yield event.plain_result(self._user_error("下载或生成 PDF 失败", error))
 
-    @jm.command("shard", alias={"分片", "分页"})
+    @jm.command("分片", alias={"shard", "分页"})
     async def jm_shard(
         self, event: AstrMessageEvent, album_id: str, shard_index: int
     ):
-        """发送指定 PDF 分片，例如：/jm shard 12345 1。"""
+        """发送指定 PDF 分片，例如：/禁漫 分片 12345 1。"""
         if not self._download_allowed(event):
             yield event.plain_result("当前配置只允许 AstrBot 管理员执行下载命令。")
             return
@@ -256,7 +250,7 @@ class JMComicPlugin(Star):
         except Exception as error:
             yield event.plain_result(self._user_error("生成 PDF 分片失败", error))
 
-    @jm.command("status", alias={"状态", "缓存"})
+    @jm.command("状态", alias={"status", "缓存"})
     async def jm_status(self, event: AstrMessageEvent):
         """查看插件运行和缓存状态。"""
         status = self.service.status()

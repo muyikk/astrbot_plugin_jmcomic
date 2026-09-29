@@ -5,7 +5,7 @@
 为 AstrBot 提供 JMComic 漫画搜索、详情浏览、随机推荐与 PDF 下载。
 
 ![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.9.2%20%3C5-5865f2?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.0.2-22c55e?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.0.3-22c55e?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-aiocqhttp-f97316?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--3.0-3b82f6?style=flat-square)
 
